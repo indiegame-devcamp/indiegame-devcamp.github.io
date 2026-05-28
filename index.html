@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DevCampLog 폴더 조회</title>
+  <link rel="stylesheet" href="./assets/styles.css">
+</head>
+<body>
+  <main>
+    <h1>DevCampLog 폴더 조회</h1>
+    <div class="notice">
+      <strong>인디게임 데브캠프 운영사무국 공식 안내 페이지</strong>
+      본 페이지는 각 팀의 DevCampLog 폴더 링크 확인 전용입니다. 비밀번호, 결제정보, Google 계정 로그인 정보는 요청하지 않습니다.
+    </div>
+    <p>수요조사 당시 제출했던 이메일과 대표자의 휴대폰 번호 뒤 4자리를 입력하세요.</p>
+    <p class="contact-copy">입력 정보는 팀별 폴더 확인 및 접속 기록 확인 목적으로만 사용됩니다. 조회가 되지 않거나 문의사항이 있을 경우 <a href="mailto:2026devcamp.office@gmail.com">2026devcamp.office@gmail.com</a>으로 문의해주세요.</p>
+
+    <form id="lookupForm">
+      <label for="email">대표자 이메일</label>
+      <input id="email" name="email" type="email" autocomplete="email" placeholder="example@email.com" required>
+
+      <label for="phoneLast4">휴대폰 뒷번호 4자리</label>
+      <input id="phoneLast4" name="phoneLast4" type="text" inputmode="numeric" maxlength="4" pattern="[0-9]{4}" placeholder="0000" required>
+
+      <button id="submitButton" type="submit">폴더 링크 조회</button>
+    </form>
+
+    <div id="message" class="message"></div>
+
+    <section id="result" class="result" aria-live="polite">
+      <div class="row">
+        <div class="key">과제번호</div>
+        <div id="taskNo" class="value"></div>
+      </div>
+      <div class="row">
+        <div class="key">과제명</div>
+        <div id="projectName" class="value"></div>
+      </div>
+      <div class="row">
+        <div class="key">팀명</div>
+        <div id="teamName" class="value"></div>
+      </div>
+      <a id="folderLink" class="button-link" href="#" target="_blank" rel="noopener">DevCampLog 폴더 열기</a>
+    </section>
+  </main>
+
+  <script src="./config.js"></script>
+  <script src="./assets/app.js"></script>
+</body>
+</html>
