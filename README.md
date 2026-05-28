@@ -1,17 +1,22 @@
 # DevCampLog Lookup
 
-GitHub Pages용 DevCampLog 팀별 폴더 조회 프론트엔드입니다.
+인디게임 데브캠프 팀별 DevCampLog 폴더 조회 페이지입니다.
 
-## 구조
+## 구성
 
 - `index.html`: 조회 화면
-- `assets/styles.css`: 기존 Apps Script 웹앱과 동일한 화면 스타일
-- `assets/app.js`: Supabase Edge Function 호출 로직
-- `config.js`: 운영 API 엔드포인트 설정
+- `assets/styles.css`: 화면 스타일
+- `assets/app.js`: 조회 API 호출 로직
+- `config.js`: 운영 API endpoint 설정
+- `supabase/migrations`: Supabase DB 스키마
+- `supabase/functions/devcamp-log-lookup`: Supabase Edge Function
 
-## API 응답 형식
+## 운영 URL
 
-프론트엔드는 `POST` 요청으로 아래 값을 전송합니다.
+- GitHub Pages: https://indiegame-devcamp.github.io/
+- Supabase Edge Function: https://qcqdccmymeazusjhrsxp.supabase.co/functions/v1/devcamp-log-lookup
+
+## API 요청
 
 ```json
 {
@@ -20,7 +25,7 @@ GitHub Pages용 DevCampLog 팀별 폴더 조회 프론트엔드입니다.
 }
 ```
 
-성공 응답은 기존 Apps Script와 같은 형태를 기대합니다.
+## API 응답
 
 ```json
 {
@@ -33,6 +38,8 @@ GitHub Pages용 DevCampLog 팀별 폴더 조회 프론트엔드입니다.
 }
 ```
 
-## GitHub Pages
+## 보안 구조
 
-Repository Settings -> Pages에서 `Deploy from a branch`, `main`, `/ (root)`로 설정하면 됩니다.
+프론트엔드는 Supabase 테이블에 직접 접근하지 않습니다. GitHub Pages는 Edge Function만 호출하고, Edge Function이 대표자 이메일과 휴대폰 번호 뒤 4자리를 검증한 뒤 일치하는 팀의 폴더 링크만 반환합니다.
+
+`teams`, `access_logs` 테이블은 RLS가 켜져 있으며 service role 전용 정책과 권한으로 운영합니다.
