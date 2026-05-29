@@ -44,13 +44,8 @@
 
 `teams`, `access_logs` 테이블은 RLS가 켜져 있으며 service role 전용 정책과 권한으로 운영합니다.
 
-## Apps Script 로그 연동
+## 접속 로그
 
-조회 요청은 Supabase `access_logs` 테이블에 먼저 기록되고, 같은 Edge Function 실행 안에서 Apps Script 로그 릴레이를 호출해 Google Sheets `0.5_access_logs`에도 즉시 append됩니다.
+조회 요청은 Supabase `access_logs` 테이블에 실시간으로 기록됩니다.
 
-Supabase Edge Function secrets에 아래 값을 설정해야 합니다.
-
-- `APPS_SCRIPT_LOG_RELAY_URL`: Apps Script Web App `/exec` URL
-- `APPS_SCRIPT_LOG_RELAY_SECRET`: Apps Script 릴레이와 공유하는 비밀값
-
-릴레이 Apps Script는 별도 프로젝트 `DevCampLog Access Log Relay`로 관리합니다.
+Google Sheets `0.5_access_logs`와 `1.2_팀별_접속기록`은 운영 안정화를 우선해 나중에 Supabase `access_logs`에서 가져와 동기화합니다.

@@ -5,16 +5,6 @@ type LookupPayload = {
   phoneLast4?: string;
 };
 
-type AccessLog = {
-  email: string;
-  phoneLast4: string;
-  success: boolean;
-  teamNo: number | null;
-  code: string | null;
-  company: string | null;
-  userAgent: string | null;
-};
-
 const allowedOrigins = new Set([
   'https://indiegame-devcamp.github.io',
   'http://localhost:4173',
@@ -58,41 +48,6 @@ async function sha256(value: string) {
   return Array.from(new Uint8Array(digest))
     .map((byte) => byte.toString(16).padStart(2, '0'))
     .join('');
-}
-
-async function appendAccessLogToAppsScript(entry: AccessLog) {
-  const relayUrl = Deno.env.get('APPS_SCRIPT_LOG_RELAY_URL');
-  const relaySecret = Deno.env.get('APPS_SCRIPT_LOG_RELAY_SECRET');
-
-  if (!relayUrl || !relaySecret) {
-    throw new Error('Apps Script log relay is not configured.');
-  }
-
-  const response = await fetch(relayUrl, {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json'
-    },
-    body: JSON.stringify({
-      secret: relaySecret,
-      email: entry.email,
-      phoneLast4: entry.phoneLast4,
-      success: entry.success,
-      teamNo: entry.teamNo,
-      code: entry.code,
-      company: entry.company,
-      userAgent: entry.userAgent
-    })
-  });
-
-  if (!response.ok) {
-    throw new Error(`Apps Script log relay failed: ${response.status} ${await response.text()}`);
-  }
-
-  const body = await response.json();
-  if (!body.ok) {
-    throw new Error(`Apps Script log relay rejected request: ${body.message || 'unknown error'}`);
-  }
 }
 
 Deno.serve(async (req) => {
@@ -173,12 +128,6 @@ Deno.serve(async (req) => {
     user_agent: accessLog.userAgent,
     ip_hash: ipHash
   });
-
-  try {
-    await appendAccessLogToAppsScript(accessLog);
-  } catch (sheetError) {
-    console.error('sheet append error', sheetError);
-  }
 
   if (!team) {
     return json(req, 200, {
