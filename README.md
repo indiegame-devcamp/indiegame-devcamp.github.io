@@ -44,15 +44,13 @@
 
 `teams`, `access_logs` 테이블은 RLS가 켜져 있으며 service role 전용 정책과 권한으로 운영합니다.
 
-## Google Sheets 로그 연동
+## Apps Script 로그 연동
 
-조회 요청은 Supabase `access_logs` 테이블에 먼저 기록되고, 같은 Edge Function 실행 안에서 Google Sheets `0.5_access_logs`에도 즉시 append됩니다.
+조회 요청은 Supabase `access_logs` 테이블에 먼저 기록되고, 같은 Edge Function 실행 안에서 Apps Script 로그 릴레이를 호출해 Google Sheets `0.5_access_logs`에도 즉시 append됩니다.
 
 Supabase Edge Function secrets에 아래 값을 설정해야 합니다.
 
-- `GOOGLE_SERVICE_ACCOUNT_EMAIL`: Google Cloud 서비스 계정 이메일
-- `GOOGLE_PRIVATE_KEY`: 서비스 계정 JSON의 `private_key` 값
-- `GOOGLE_ACCESS_LOG_SPREADSHEET_ID`: `1zqtiqL7pyMVeSLMXQ68oHqjUNdRUBGdul40Mw-qCV3w`
-- `GOOGLE_ACCESS_LOG_SHEET_NAME`: `0.5_access_logs`
+- `APPS_SCRIPT_LOG_RELAY_URL`: Apps Script Web App `/exec` URL
+- `APPS_SCRIPT_LOG_RELAY_SECRET`: Apps Script 릴레이와 공유하는 비밀값
 
-서비스 계정 이메일은 대상 Google Sheet에 편집자로 공유되어 있어야 합니다.
+릴레이 Apps Script는 별도 프로젝트 `DevCampLog Access Log Relay`로 관리합니다.

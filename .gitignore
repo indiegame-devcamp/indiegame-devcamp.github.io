@@ -6,3 +6,4 @@ Thumbs.db
 *.secret.json
 *service-account*.json
 *service_account*.json
+supabase/.temp/

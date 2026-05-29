@@ -5,7 +5,7 @@ type LookupPayload = {
   phoneLast4?: string;
 };
 
-type SheetLogEntry = {
+type AccessLog = {
   email: string;
   phoneLast4: string;
   success: boolean;
@@ -13,7 +13,6 @@ type SheetLogEntry = {
   code: string | null;
   company: string | null;
   userAgent: string | null;
-  note?: string;
 };
 
 const allowedOrigins = new Set([
@@ -61,134 +60,38 @@ async function sha256(value: string) {
     .join('');
 }
 
-function base64UrlEncode(value: string | ArrayBuffer) {
-  const bytes = typeof value === 'string'
-    ? new TextEncoder().encode(value)
-    : new Uint8Array(value);
+async function appendAccessLogToAppsScript(entry: AccessLog) {
+  const relayUrl = Deno.env.get('APPS_SCRIPT_LOG_RELAY_URL');
+  const relaySecret = Deno.env.get('APPS_SCRIPT_LOG_RELAY_SECRET');
 
-  let binary = '';
-  bytes.forEach((byte) => {
-    binary += String.fromCharCode(byte);
-  });
-
-  return btoa(binary)
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/g, '');
-}
-
-function formatSheetTimestamp(date: Date) {
-  const koreaTime = new Date(date.getTime() + 9 * 60 * 60 * 1000);
-  const yyyy = koreaTime.getUTCFullYear();
-  const mm = String(koreaTime.getUTCMonth() + 1).padStart(2, '0');
-  const dd = String(koreaTime.getUTCDate()).padStart(2, '0');
-  const hh = String(koreaTime.getUTCHours()).padStart(2, '0');
-  const mi = String(koreaTime.getUTCMinutes()).padStart(2, '0');
-  const ss = String(koreaTime.getUTCSeconds()).padStart(2, '0');
-
-  return `${yyyy}-${mm}-${dd} ${hh}:${mi}:${ss}`;
-}
-
-async function createGoogleAccessToken() {
-  const serviceAccountEmail = Deno.env.get('GOOGLE_SERVICE_ACCOUNT_EMAIL');
-  const rawPrivateKey = Deno.env.get('GOOGLE_PRIVATE_KEY');
-
-  if (!serviceAccountEmail || !rawPrivateKey) {
-    throw new Error('Google Sheets logging is not configured.');
+  if (!relayUrl || !relaySecret) {
+    throw new Error('Apps Script log relay is not configured.');
   }
 
-  const privateKey = rawPrivateKey.replace(/\\n/g, '\n');
-  const pemBody = privateKey
-    .replace('-----BEGIN PRIVATE KEY-----', '')
-    .replace('-----END PRIVATE KEY-----', '')
-    .replace(/\s/g, '');
-  const binaryDer = Uint8Array.from(atob(pemBody), (char) => char.charCodeAt(0));
-  const cryptoKey = await crypto.subtle.importKey(
-    'pkcs8',
-    binaryDer,
-    {
-      name: 'RSASSA-PKCS1-v1_5',
-      hash: 'SHA-256'
-    },
-    false,
-    ['sign']
-  );
-
-  const now = Math.floor(Date.now() / 1000);
-  const header = {
-    alg: 'RS256',
-    typ: 'JWT'
-  };
-  const claim = {
-    iss: serviceAccountEmail,
-    scope: 'https://www.googleapis.com/auth/spreadsheets',
-    aud: 'https://oauth2.googleapis.com/token',
-    iat: now,
-    exp: now + 3600
-  };
-  const unsignedJwt = `${base64UrlEncode(JSON.stringify(header))}.${base64UrlEncode(JSON.stringify(claim))}`;
-  const signature = await crypto.subtle.sign(
-    'RSASSA-PKCS1-v1_5',
-    cryptoKey,
-    new TextEncoder().encode(unsignedJwt)
-  );
-  const jwt = `${unsignedJwt}.${base64UrlEncode(signature)}`;
-
-  const response = await fetch('https://oauth2.googleapis.com/token', {
+  const response = await fetch(relayUrl, {
     method: 'POST',
     headers: {
-      'content-type': 'application/x-www-form-urlencoded'
+      'content-type': 'application/json'
     },
-    body: new URLSearchParams({
-      grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
-      assertion: jwt
+    body: JSON.stringify({
+      secret: relaySecret,
+      email: entry.email,
+      phoneLast4: entry.phoneLast4,
+      success: entry.success,
+      teamNo: entry.teamNo,
+      code: entry.code,
+      company: entry.company,
+      userAgent: entry.userAgent
     })
   });
 
   if (!response.ok) {
-    throw new Error(`Google token request failed: ${response.status} ${await response.text()}`);
+    throw new Error(`Apps Script log relay failed: ${response.status} ${await response.text()}`);
   }
 
   const body = await response.json();
-  return body.access_token as string;
-}
-
-async function appendAccessLogToSheet(entry: SheetLogEntry) {
-  const spreadsheetId = Deno.env.get('GOOGLE_ACCESS_LOG_SPREADSHEET_ID');
-  const sheetName = Deno.env.get('GOOGLE_ACCESS_LOG_SHEET_NAME') || '0.5_access_logs';
-
-  if (!spreadsheetId) {
-    throw new Error('GOOGLE_ACCESS_LOG_SPREADSHEET_ID is not configured.');
-  }
-
-  const accessToken = await createGoogleAccessToken();
-  const range = encodeURIComponent(`'${sheetName.replace(/'/g, "''")}'!A:I`);
-  const response = await fetch(
-    `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${range}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`,
-    {
-      method: 'POST',
-      headers: {
-        'authorization': `Bearer ${accessToken}`,
-        'content-type': 'application/json'
-      },
-      body: JSON.stringify({
-        values: [[
-          formatSheetTimestamp(new Date()),
-          entry.email,
-          entry.phoneLast4,
-          entry.success,
-          entry.teamNo ?? '',
-          entry.code ?? '',
-          entry.company ?? '',
-          entry.userAgent ?? '',
-          entry.note ?? ''
-        ]]
-      })
-    }
-  );
-
-  if (!response.ok) {
-    throw new Error(`Google Sheets append failed: ${response.status} ${await response.text()}`);
+  if (!body.ok) {
+    throw new Error(`Apps Script log relay rejected request: ${body.message || 'unknown error'}`);
   }
 }
 
@@ -272,7 +175,7 @@ Deno.serve(async (req) => {
   });
 
   try {
-    await appendAccessLogToSheet(accessLog);
+    await appendAccessLogToAppsScript(accessLog);
   } catch (sheetError) {
     console.error('sheet append error', sheetError);
   }
